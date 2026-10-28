@@ -74,6 +74,13 @@ export function detect(root = ".") {
       out.commands.push(`Einzeltest: \`… --filter "FullyQualifiedName~Klasse.Methode"\` (Testprojekte: ${tests.join(", ")})`);
     }
     for (const p of consoleChecks) out.commands.push(`Prüfprogramm: \`dotnet run --project ${p.slice(0, p.lastIndexOf("/")) || p}\``);
+    // Direkt eingebundene Pakete: zeigt dem Agenten, welche Bibliotheken bereitstehen (Details per api <Paket>)
+    const pkgs = new Map();
+    for (const p of projects) for (const m of read(root, p).matchAll(/<PackageReference\s+Include="([^"]+)"(?:\s+Version="([^"]+)")?/g)) pkgs.set(m[1], m[2] ?? "");
+    const central = read(root, "Directory.Packages.props");
+    for (const m of central.matchAll(/<PackageVersion\s+Include="([^"]+)"\s+Version="([^"]+)"/g)) if (pkgs.has(m[1]) && !pkgs.get(m[1])) pkgs.set(m[1], m[2]);
+    const shown = [...pkgs].filter(([id]) => !/^(Microsoft\.NET\.Test\.Sdk|coverlet\.|xunit\.runner|MSTest\.Test(Adapter|Framework)|NUnit3TestAdapter)/i.test(id));
+    if (shown.length) out.stacks.push(`Pakete: ${shown.slice(0, 12).map(([id, v]) => (v ? `${id} ${v}` : id)).join(", ")}${shown.length > 12 ? ` (+${shown.length - 12})` : ""}`);
     const all2 = props + projects.map((p) => read(root, p)).join("\n");
     const conv = [];
     if (/<Nullable>enable<\/Nullable>/.test(all2)) conv.push("Nullable aktiv");

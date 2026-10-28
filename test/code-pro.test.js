@@ -225,6 +225,10 @@ test("find: Treffer samt umschließender Methode und Doku-Kommentar, ein Block j
   assert.ok(!/F29/.test(cs), "nur die eine Methode");
   assert.match(py, /app\.py:4-6 {2}def expedite\(x\)/);
   assert.match(find("gibtsnicht", [dir]).text, /Keine Treffer/);
+  assert.equal(find("(?i)BEVORZUGT", [dir]).text.split("── ").filter(Boolean).length, 1, "(?i) wie bei rg");
+  assert.match(find("Render(", [dir]).text, /Keine Treffer/, "ungültiger Regex wird wörtlich gesucht statt abzustürzen");
+  const cli = execFileSync("node", [join(scripts, "find.mjs"), "find", "IsExpedited", dir], { encoding: "utf8", env: { ...process.env, CODE_PRO_HOME: dir } });
+  assert.match(cli, /IsExpedited/, "Werkzeugname doppelt angegeben");
 });
 
 test("open: wählt Lösung (.slnx vor .sln), sonst index.html; öffnet ohne Bildschirm nicht", async () => {
@@ -256,4 +260,57 @@ test("agents-md: ohne Lösung bei mehreren Projekten das Projekt bauen, das die 
   assert.match(cmds, /Build: `dotnet build tests\/Lib\.Tests\/Lib\.Tests\.csproj /);
   assert.match(cmds, /Test: `dotnet test tests\/Lib\.Tests\/Lib\.Tests\.csproj /);
   assert.ok(!/dotnet build --nologo/.test(cmds), "nacktes dotnet build scheitert bei mehreren Projekten");
+  writeFileSync(join(dir, "src/Lib/Lib.csproj"), '<Project><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup><ItemGroup><PackageReference Include="Acme.Pricing" Version="3.4.1" /><PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" /></ItemGroup></Project>');
+  const stacks = detect(dir).stacks.join("\n");
+  assert.match(stacks, /Pakete: .*Acme\.Pricing 3\.4\.1/, "Pakete im Steckbrief");
+  assert.ok(!/Microsoft\.NET\.Test\.Sdk/.test(stacks), "Test-Infrastruktur ausgeblendet");
+});
+
+test("api: echte Signaturen aus XML-Doku von Projektpaketen, Überladungen gruppiert, Member eines Typs", async () => {
+  const { api } = await import(new URL("api.mjs", `file://${scripts}`));
+  const dir = mkdtempSync(join(tmpdir(), "api-"));
+  const pkgRoot = join(dir, "packages");
+  mkdirSync(join(pkgRoot, "acme.tools/1.2.0/lib/net8.0"), { recursive: true });
+  mkdirSync(join(pkgRoot, "acme.tools/1.2.0/lib/netstandard2.0"), { recursive: true });
+  const doc = (summary) => `<?xml version="1.0"?><doc><members>
+<member name="T:Acme.Tools.Widget"><summary>${summary}</summary></member>
+<member name="M:Acme.Tools.Widget.#ctor(System.String)"><summary>Erzeugt.</summary><param name="name">Name</param></member>
+<member name="M:Acme.Tools.Widget.Render(System.Int32,System.Collections.Generic.IList{System.String})"><summary>Zeichnet.</summary><param name="width">B</param><param name="lines">Z</param><returns>Die Ausgabe.</returns></member>
+<member name="M:Acme.Tools.Widget.Render(System.Int32)"><summary>Zeichnet schmal.</summary><param name="width">B</param></member>
+<member name="M:Acme.Tools.Widget.Map\`\`1(System.Func{\`\`0})"><typeparam name="TOut">x</typeparam><summary>Bildet ab.</summary><param name="selector">s</param></member>
+<member name="P:Acme.Tools.Widget.Title"><summary>Titel.</summary></member>
+</members></doc>`;
+  writeFileSync(join(pkgRoot, "acme.tools/1.2.0/lib/net8.0/Acme.Tools.xml"), doc("Ein Widget (net8.0)."));
+  writeFileSync(join(pkgRoot, "acme.tools/1.2.0/lib/netstandard2.0/Acme.Tools.xml"), doc("Ein Widget (netstandard)."));
+  mkdirSync(join(dir, "src/App/obj"), { recursive: true });
+  writeFileSync(join(dir, "src/App/obj/project.assets.json"), JSON.stringify({
+    packageFolders: { [pkgRoot + "/"]: {} },
+    libraries: { "Acme.Tools/1.2.0": { type: "package", path: "acme.tools/1.2.0", files: ["lib/netstandard2.0/Acme.Tools.xml", "lib/net8.0/Acme.Tools.xml"] } },
+  }));
+  const render = api("Widget.Render", dir);
+  assert.match(render, /^Methode Acme\.Tools\.Widget\.Render {2}\(Acme\.Tools 1\.2\.0\), 2 Überladungen: Zeichnet\./);
+  assert.match(render, /Render\(int width, IList<string> lines\)/);
+  assert.match(render, /Render\(int width\) — Zeichnet schmal\./);
+  const type = api("Acme.Tools.Widget", dir);
+  assert.match(type, /Typ Acme\.Tools\.Widget .*: Ein Widget \(net8\.0\)\./, "beste Zielplattform");
+  assert.match(type, /\n  ctor\(string name\) — Erzeugt\./, "überschaubarer Typ: Signaturen gleich dabei");
+  assert.match(type, /\n  Property Title — Titel\./);
+  assert.match(api("Widget.Map", dir), /Map<TOut>\(Func<TOut> selector\)/);
+  assert.match(api("Widget.GibtsNicht", dir), /Nichts gefunden/);
+  const ns = api("Acme.Tools", dir);
+  assert.match(ns, /^Typen in Acme\.Tools \(1\)/);
+  assert.match(ns, /Widget — Ein Widget \(net8\.0\)\./);
+  assert.match(ns, /Render\(int width, IList<string> lines\) → Die Ausgabe\. — Zeichnet\./, "kleine Pakete: Member gleich dabei");
+});
+
+test("pkg: Suche und Versionen kompakt (NuGet-Antworten simuliert)", async () => {
+  const { search, versions } = await import(new URL("pkg.mjs", `file://${scripts}`));
+  const http = async (url) => {
+    if (url.endsWith("/v3/index.json")) return { resources: [{ "@id": "https://search.example/query", "@type": "SearchQueryService/3.5.0" }] };
+    if (url.startsWith("https://search.example/query?q=excel")) return { data: [{ id: "ClosedXML", version: "0.105.1", totalDownloads: 98_000_000, verified: false, description: "Excel-Dateien erstellen und bearbeiten" }] };
+    if (url.includes("/v3-flatcontainer/polly/")) return { versions: ["8.5.0", "8.6.0", "9.0.0-beta.1"] };
+    throw new Error(url);
+  };
+  assert.match(await search("excel", 8, http), /^ClosedXML 0\.105\.1 · 98\.0 Mio\. Downloads\n {4}Excel-Dateien/);
+  assert.equal(await versions("Polly", http), "Polly: neueste stabile 8.6.0 · neueste Vorabversion 9.0.0-beta.1 · zuletzt: 9.0.0-beta.1, 8.6.0, 8.5.0");
 });

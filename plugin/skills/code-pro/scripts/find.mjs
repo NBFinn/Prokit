@@ -52,7 +52,11 @@ function blockEnd(lines, start, ext) {
 }
 
 export function find(pattern, paths = ["."], { ignoreCase = false, max = 6 } = {}) {
-  const re = new RegExp(pattern, ignoreCase ? "i" : "");
+  // (?i) wie bei grep/rg/.NET verstehen: JavaScript kennt den Inline-Schalter nicht
+  if (/^\(\?i\)/.test(pattern)) { pattern = pattern.slice(4); ignoreCase = true; }
+  pattern = pattern.replace(/\(\?i\)/g, "");
+  let re;
+  try { re = new RegExp(pattern, ignoreCase ? "i" : ""); } catch { re = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), ignoreCase ? "i" : ""); }
   const blocks = [];
   const extra = [];
   let rawChars = 0;
@@ -103,6 +107,7 @@ export function find(pattern, paths = ["."], { ignoreCase = false, max = 6 } = {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
+  if (args[0] === "find" && args.length > 1) args.shift(); // "find.mjs find <muster>" ebenfalls verstehen
   const mi = args.indexOf("--max");
   const max = mi === -1 ? 6 : Number(args[mi + 1]);
   const rest = args.filter((a, i) => a !== "-i" && a !== "--max" && (mi === -1 || i !== mi + 1));

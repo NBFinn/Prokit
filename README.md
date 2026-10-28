@@ -54,22 +54,25 @@ Gleiche Skills, Werkzeuge und Hooks. Das Projektgedächtnis schreibt hier in `CL
 
 ## Gemessen: mit und ohne ProKit
 
-Gleiche Aufgabe, gleiches Modell, frische Sitzung, je 2–3 Läufe (Claude Code, Version 2.5, echte Tokenzähler):
+Gleiche Aufgabe, gleiches Modell, frische Sitzung, je 2–3 Läufe (Claude Code, Version 2.6, echte Tokenzähler). Alle Läufe haben ihre Aufgabe gelöst.
 
-| Aufgabe | Ohne ProKit | Mit ProKit | Zeit ohne → mit | Gelöst |
-|---|---:|---:|---:|---|
-| Versteckter Fehler in Projekt mit 25 Dateien | 180.000 | **109.000 (−39 %)** | 36 s → 20 s | alle |
-| Frage zu großem Projekt (5.800 Zeilen) | 139.000 | **107.000 (−23 %)** | 17 s → 16 s | alle |
-| C#-Fehler beheben (2 fehlschlagende Prüfungen) | 154.000 | **124.000 (−20 %)** | 24 s → 20 s | alle |
-| Feature über mehrere Stellen inkl. neuer Prüfungen | 155.000 | **125.000 (−19 %)** | 29 s → 26 s | alle |
-| Einstellungsseite als HTML bauen | 84.000 | 84.000 (±0) | 67 s → 58 s | alle, gleichwertige Qualität, wird direkt geöffnet |
+| Aufgabe | Ohne ProKit | Mit ProKit | Zeit ohne → mit |
+|---|---:|---:|---:|
+| Internes NuGet-Paket nutzen (API unbekannt) | 332.000 | **151.000 (−55 %)** | 51 s → 26 s |
+| Versteckter Fehler in Projekt mit 25 Dateien | 180.000 | **109.000 (−39 %)** | 36 s → 20 s |
+| Bekannte Bibliothek einbauen (Cache mit BitFaster.Caching) | 165.000 | **110.000 (−33 %)** | 31 s → 31 s |
+| Frage zu großem Projekt (5.800 Zeilen) | 139.000 | **71.000–107.000 (−23 bis −49 %)** | 17 s → 15 s |
+| C#-Fehler beheben (2 fehlschlagende Prüfungen) | 154.000 | **124.000 (−20 %)** | 24 s → 21 s |
+| Feature über mehrere Stellen inkl. neuer Prüfungen | 155.000 | **125.000 (−19 %)** | 29 s → 26 s |
+| Einstellungsseite als HTML bauen | 84.000 | 84.000 (±0) | 67 s → 58 s |
 
-Woher die Ersparnis kommt:
-- **Projektsteckbrief beim Start** (Stack, korrekte Build- und Testbefehle, Git-Stand, Dateien mit Zeilenzahl) ersetzt die Erkundungsrunde, mit der ein Agent sonst jede Aufgabe beginnt.
+Woher das kommt:
+- **Projektsteckbrief beim Start** (Stack, NuGet-Pakete, korrekte Build- und Testbefehle, Git-Stand, Dateien mit Zeilenzahl) ersetzt die Erkundungsrunde.
+- **`api`** liefert die echte API eines Pakets (auch interner Firmenpakete) mit Signaturen und Doku in einem Aufruf, statt XML-Dateien zu durchsuchen oder Methoden zu raten.
 - **`find`** zeigt Suchtreffer samt ganzer Methode: Suchen und Lesen in einer Runde.
 - **Runden-Regeln:** Lesen, Suchen und Testen bündeln, Änderung und Test im selben Schritt.
 
-Jede gesparte Runde spart den ganzen Kontext einmal. Die Messungen haben außerdem zwei Fehler aufgedeckt, die Runden kosteten (falscher Build-Befehl bei mehreren Projekten, eigene Prüf- und Öffnen-Runden); beide sind behoben.
+Jede gesparte Runde spart den ganzen Kontext einmal. Die Werkzeuge kosten nur etwas, wenn sie aufgerufen werden.
 
 ## Code Pro
 
@@ -79,6 +82,8 @@ Jede gesparte Runde spart den ganzen Kontext einmal. Die Messungen haben außerd
 |---|---|
 | `map.mjs` | Repo-Übersicht mit Zeilenzahlen in wenigen Zeilen |
 | `find.mjs` | Suchtreffer samt umschließender Methode mit Zeilennummern: Suchen und Lesen in einem Schritt |
+| `api.mjs` | Echte .NET-/NuGet-API: `api JsonSerializer.Deserialize`, `api Acme.Pricing` (alle Typen eines Pakets). Quellen: Projektpakete inkl. transitiver, .NET-Basisbibliothek, ASP.NET Core, unter Windows WPF/WinForms, lokaler NuGet-Cache. Offline |
+| `pkg.mjs` | NuGet: `pkg search <begriff>` (passende Pakete mit Version und Downloads), `pkg versions <id>` |
 | `brief.mjs` | Projektsteckbrief (läuft automatisch beim Start) |
 | `open.mjs` | Ergebnis beim Nutzer öffnen: `.slnx`/`.sln` in Visual Studio (neueste Version), HTML im Browser, sonst Standard-App |
 | `outline.mjs` | Klassen/Methoden mit Zeilennummern (C#, TS/JS, Python, Java, Go, Rust, C/C++ …), dann nur Abschnitte lesen |

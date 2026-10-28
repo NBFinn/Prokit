@@ -1,6 +1,6 @@
 {
   "name": "prokit",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "ProKit: schlanker C#-Profi mit Token-Sparwerkzeugen, Projektgedächtnis und ehrlicher Token-Bilanz, Farbrechner, 3D-Konstrukteur mit Mesh-Prüfung und Vorschau.",
   "keywords": [
     "csharp",
