@@ -1,0 +1,17 @@
+{
+  "name": "nbfinn-prokit",
+  "owner": {
+    "name": "NBFinn"
+  },
+  "metadata": {
+    "description": "ProKit: C#-Profi, Farbrechner, 3D und Token-Bilanz für Claude"
+  },
+  "plugins": [
+    {
+      "name": "prokit",
+      "source": "./dist/claude/prokit",
+      "description": "C#-Profi mit Token-Sparwerkzeugen und ehrlicher Token-Bilanz, Farb- und Kontrastrechner, 3D-Konstrukteur mit Mesh-Prüfung.",
+      "category": "development"
+    }
+  ]
+}

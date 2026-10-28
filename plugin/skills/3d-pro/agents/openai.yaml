@@ -1,0 +1,8 @@
+interface:
+  display_name: "3D Pro"
+  short_description: "Druckfertige 3D-Modelle bauen und prüfen"
+  brand_color: "#EA580C"
+  default_prompt: "Nutze $3d-pro, um einen druckfertigen Halter als STL zu konstruieren."
+
+policy:
+  allow_implicit_invocation: true

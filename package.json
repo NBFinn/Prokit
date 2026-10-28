@@ -1,0 +1,20 @@
+{
+  "name": "prokit",
+  "version": "2.5.0",
+  "description": "ProKit: Codex-Plugin (auch für Claude), das Agenten zu Profis in C#-Programmierung, Design und 3D macht und Tokens spart",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "build": "npm run build:knowledge && npm run build:design && npm run build:claude",
+    "build:knowledge": "node scripts/build-knowledge.js",
+    "build:design": "node scripts/build-design.js",
+    "build:claude": "node scripts/build-claude.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

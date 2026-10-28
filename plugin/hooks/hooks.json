@@ -1,0 +1,30 @@
+{
+  "description": "ProKit: Kurzregeln beim Start jeder Sitzung, Token-Bilanz am Ende jeder Antwort.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$PLUGIN_ROOT/hooks/session-start.mjs\"",
+            "commandWindows": "node \"%PLUGIN_ROOT%\\hooks\\session-start.mjs\"",
+            "timeout": 30,
+            "statusMessage": "ProKit wird geladen"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$PLUGIN_ROOT/hooks/stop.mjs\"",
+            "commandWindows": "node \"%PLUGIN_ROOT%\\hooks\\stop.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

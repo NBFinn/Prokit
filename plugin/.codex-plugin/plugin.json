@@ -1,0 +1,30 @@
+{
+  "name": "prokit",
+  "version": "2.5.0",
+  "description": "ProKit: schlanker C#-Profi mit Token-Sparwerkzeugen, Projektgedächtnis und ehrlicher Token-Bilanz, Farbrechner, 3D-Konstrukteur mit Mesh-Prüfung und Vorschau.",
+  "keywords": [
+    "csharp",
+    "dotnet",
+    "coding",
+    "tokens",
+    "design",
+    "ui",
+    "3d",
+    "3d-druck"
+  ],
+  "skills": "./skills",
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "ProKit",
+    "shortDescription": "C#, Farbrechner und 3D, schlank",
+    "longDescription": "Bündelt Code Pro, Design Pro und 3D Pro, schlank gehalten, damit es weniger Tokens kostet, als es spart: Werkzeuge ersetzen ganze Dateien und lange Ausgaben, der Farbrechner prüft Kontraste exakt, 3D-Modelle werden geprüft und angesehen. Die Token-Bilanz zeigt den gemessenen Verbrauch.",
+    "developerName": "NBFinn",
+    "category": "Coding",
+    "brandColor": "#7C3AED",
+    "defaultPrompt": [
+      "Lege eine AGENTS.md für dieses Repo an",
+      "Baue eine .NET-10-Web-API mit Tests und schöner Startseite",
+      "Konstruiere einen Halter als STL und prüfe ihn"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+interface:
+  display_name: "Code Pro"
+  short_description: "C#-Profi mit weniger Tokens"
+  brand_color: "#512BD4"
+  default_prompt: "Nutze $code-pro, um den fehlschlagenden Test zu finden und zu beheben."
+
+policy:
+  allow_implicit_invocation: false

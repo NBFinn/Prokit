@@ -1,0 +1,20 @@
+{
+  "name": "nbfinn-prokit",
+  "interface": {
+    "displayName": "ProKit (NBFinn)"
+  },
+  "plugins": [
+    {
+      "name": "prokit",
+      "source": {
+        "source": "local",
+        "path": "./plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Coding"
+    }
+  ]
+}

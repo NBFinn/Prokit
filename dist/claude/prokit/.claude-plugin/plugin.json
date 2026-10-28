@@ -1,0 +1,18 @@
+{
+  "name": "prokit",
+  "version": "2.5.0",
+  "description": "ProKit: schlanker C#-Profi mit Token-Sparwerkzeugen, Projektgedächtnis (CLAUDE.md) und ehrlicher Token-Bilanz, Farbrechner, 3D-Konstrukteur mit Mesh-Prüfung und Vorschau.",
+  "author": {
+    "name": "NBFinn"
+  },
+  "homepage": "https://github.com/NBFinn/prokit",
+  "repository": "https://github.com/NBFinn/prokit",
+  "keywords": [
+    "csharp",
+    "dotnet",
+    "tokens",
+    "design",
+    "3d",
+    "3d-druck"
+  ]
+}

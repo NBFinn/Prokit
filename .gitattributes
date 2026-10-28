@@ -1,0 +1,5 @@
+# Einheitliche LF-Zeilenenden, auch beim Klonen unter Windows (Skill-Kopfzeilen, Hooks, Tests verlassen sich darauf)
+* text=auto eol=lf
+*.plugin binary
+*.png binary
+*.stl binary
