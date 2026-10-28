@@ -89,7 +89,7 @@ Jede gesparte Runde spart den ganzen Kontext einmal. Die Werkzeuge kosten nur et
 | `outline.mjs` | Klassen/Methoden mit Zeilennummern (C#, TS/JS, Python, Java, Go, Rust, C/C++ …), dann nur Abschnitte lesen |
 | `run.mjs` | Test- und Build-Ausgaben verdichten, Fehler mit Kontext behalten (z. B. 276 → 30 Zeilen) |
 | `diff-outline.mjs` | Welche Methoden eine Änderung betrifft, statt den ganzen Diff zu lesen |
-| `lint-cs.mjs` | Schneller C#-Check: async void, .Result, leere catch, throw ex, Parsen ohne Kultur, SQL-Verkettung … |
+| `lint-cs.mjs` | Schneller C#-Check für das ganze Projekt (.cs, .razor, .cshtml) oder einzelne Pfade: async void, .Result, leere catch, throw ex, Parsen ohne Kultur, SQL-Verkettung … |
 | `secrets.mjs` | API-Keys, Tokens, private Schlüssel vor dem Commit finden (maskiert) |
 | `agents-md.mjs` | **Projektgedächtnis:** Stack, Befehle, Konventionen, CI → `AGENTS.md` |
 | `savings.mjs` | Token-Bilanz heute, 7 Tage, gesamt und je Werkzeug |

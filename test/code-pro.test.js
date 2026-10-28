@@ -314,3 +314,39 @@ test("pkg: Suche und Versionen kompakt (NuGet-Antworten simuliert)", async () =>
   assert.match(await search("excel", 8, http), /^ClosedXML 0\.105\.1 · 98\.0 Mio\. Downloads\n {4}Excel-Dateien/);
   assert.equal(await versions("Polly", http), "Polly: neueste stabile 8.6.0 · neueste Vorabversion 9.0.0-beta.1 · zuletzt: 9.0.0-beta.1, 8.6.0, 8.5.0");
 });
+
+test("lint-cs: prüft auch .razor/.cshtml (C#-Blöcke, @( ), @-Attribute), Markup nicht; ohne Pfad das ganze Projekt", async () => {
+  const { razorToCs, lintSource } = await import(new URL("lint-cs.mjs", `file://${scripts}`));
+  const razor = [
+    '@page "/counter"',
+    "<h1>Zähler</h1>",
+    '<button @onclick="() => Http.GetStringAsync(url).Wait()">Laden</button>',
+    "<p>@(Http.GetStringAsync(\"/y\").Result)</p>",
+    "<p>Markup mit catch {} und async void ist kein Code</p>",
+    "@code {",
+    "    private async void LoadAsync()",
+    "    {",
+    "        try { await Task.Delay(1); }",
+    "        catch { }",
+    "    }",
+    "}",
+  ].join("\n");
+  const cs = razorToCs(razor);
+  assert.equal(cs.split("\n").length, razor.split("\n").length, "Zeilennummern bleiben erhalten");
+  const found = lintSource(cs).map((f) => `${f.line} ${f.id}`);
+  assert.deepEqual(found, ["3 blocking-wait", "4 blocking-wait", "7 async-void", "10 empty-catch"]);
+
+  const dir = mkdtempSync(join(tmpdir(), "lint-proj-"));
+  mkdirSync(join(dir, "Pages"), { recursive: true });
+  mkdirSync(join(dir, "obj"), { recursive: true });
+  writeFileSync(join(dir, "Pages/Counter.razor"), razor);
+  writeFileSync(join(dir, "Pages/Index.cshtml"), "@page\n@{\n    var t = Task.Delay(1).Result;\n}\n");
+  writeFileSync(join(dir, "Service.cs"), "public sealed class S\n{\n    public async void Run() { await Task.Delay(1); }\n}\n");
+  writeFileSync(join(dir, "obj/Gen.cs"), "public class G { async void X() {} }\n");
+  const r = spawnSync("node", [join(scripts, "lint-cs.mjs")], { cwd: dir, encoding: "utf8" });
+  assert.match(r.stdout, /Counter\.razor:7 {2}error {2}async-void/);
+  assert.match(r.stdout, /Index\.cshtml:3 /);
+  assert.match(r.stdout, /Service\.cs:3 /);
+  assert.ok(!/Gen\.cs/.test(r.stdout), "Build-Ausgaben nicht");
+  assert.match(r.stdout, /── 3 Dateien geprüft \((?=.*1 \.razor)(?=.*1 \.cshtml)(?=.*1 \.cs)/);
+});

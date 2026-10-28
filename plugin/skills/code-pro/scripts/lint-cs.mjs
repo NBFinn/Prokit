@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Schneller C#-Check auf typische Fehler und Anti-Patterns (ohne Build, ohne Abhängigkeiten).
+// Prüft .cs sowie den C#-Anteil von .razor (Blazor) und .cshtml (Razor Pages/MVC): @code-, @functions- und
+// @{ }-Blöcke, @( )-Ausdrücke und @-Attributwerte wie @onclick="…". Zeilennummern beziehen sich auf die Originaldatei.
 // Ergänzt Compiler und Analyzer, ersetzt sie nicht. Treffer sind Hinweise zum Prüfen, keine Beweise.
 //
-//   node lint-cs.mjs [pfad ...] [--json] [--max 60]
+//   node lint-cs.mjs [pfad ...] [--json] [--max 60]     ohne Pfad: das ganze Projekt
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -219,22 +221,56 @@ export function lintSource(source) {
   return findings.sort((a, b) => a.line - b.line);
 }
 
+// Razor/Blazor: nur den C#-Anteil behalten, alles andere durch Leerzeichen ersetzen (Zeilen bleiben erhalten).
+export function razorToCs(source) {
+  const out = source.replace(/[^\n]/g, " ").split("");
+  const keep = (from, to) => { for (let i = from; i < to; i++) out[i] = source[i]; };
+  // Ende des Klammerblocks ab der öffnenden Klammer; Strings, Zeichen und Kommentare überspringen
+  const close = (i, open = "{", shut = "}") => {
+    let depth = 0;
+    for (let k = i; k < source.length; k++) {
+      const c = source[k];
+      if (c === '"' || c === "'") { const q = c; k++; while (k < source.length && source[k] !== q && source[k] !== "\n") { if (source[k] === "\\") k++; k++; } continue; }
+      if (c === "/" && source[k + 1] === "/") { while (k < source.length && source[k] !== "\n") k++; continue; }
+      if (c === "/" && source[k + 1] === "*") { k = source.indexOf("*/", k + 2); if (k === -1) return source.length; k++; continue; }
+      if (c === open) depth++;
+      else if (c === shut && --depth === 0) return k;
+    }
+    return source.length;
+  };
+  const blocks = /@(?:code|functions)\s*\{|@\{/g;
+  for (let m; (m = blocks.exec(source)); ) {
+    const open = m.index + m[0].length - 1;
+    const end = close(open);
+    keep(open + 1, end);
+    blocks.lastIndex = end;
+  }
+  // @( Ausdruck ) und Attributwerte "@…" im Markup
+  for (const m of source.matchAll(/@\(/g)) keep(m.index + 2, close(m.index + 1, "(", ")"));
+  // Blazor-Direktiven (@onclick="…", @bind-Value="…") und Werte der Form attr="@…"
+  for (const m of source.matchAll(/(@[\w:.-]+\s*=\s*"|=\s*"@)([^"]*)"/g)) { const start = m.index + m[1].length; keep(start, start + m[2].length); }
+  return out.join("");
+}
+
+export const isRazor = (f) => /\.(razor|cshtml)$/i.test(f);
+
 const SKIP = /(^|[\\/])(bin|obj|node_modules|\.git|Migrations)([\\/]|$)|\.(g|designer|generated)\.cs$|AssemblyInfo\.cs$/i;
+const CS_FILE = /\.(cs|razor|cshtml)$/i;
 
 function csFiles(paths) {
   const files = [];
   for (const p of paths) {
     const st = statSync(p, { throwIfNoEntry: false });
     if (!st) continue;
-    if (st.isFile()) { if (p.endsWith(".cs")) files.push(p); continue; }
+    if (st.isFile()) { if (CS_FILE.test(p)) files.push(p); continue; }
     try {
-      const out = execFileSync("git", ["ls-files", "-co", "--exclude-standard", "--", "*.cs"], { cwd: p, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+      const out = execFileSync("git", ["ls-files", "-co", "--exclude-standard", "--", "*.cs", "*.razor", "*.cshtml"], { cwd: p, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
       files.push(...out.split("\n").filter(Boolean).map((f) => join(p, f)));
     } catch {
       const walk = (d) => {
         for (const e of readdirSync(d, { withFileTypes: true })) {
           const f = join(d, e.name);
-          if (e.isDirectory()) { if (!SKIP.test(f + "/")) walk(f); } else if (e.name.endsWith(".cs")) files.push(f);
+          if (e.isDirectory()) { if (!SKIP.test(f + "/")) walk(f); } else if (CS_FILE.test(e.name)) files.push(f);
         }
       };
       walk(p);
@@ -250,7 +286,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const paths = args.filter((a, i) => !a.startsWith("--") && (mi === -1 || i !== mi + 1));
   const files = csFiles(paths.length ? paths : ["."]);
   const all = [];
-  for (const f of files) for (const x of lintSource(readFileSync(f, "utf8"))) all.push({ file: relative(".", f) || f, ...x });
+  for (const f of files) {
+    const text = readFileSync(f, "utf8");
+    for (const x of lintSource(isRazor(f) ? razorToCs(text) : text)) all.push({ file: relative(".", f) || f, ...x });
+  }
   const order = { error: 0, warn: 1, info: 2 };
   all.sort((a, b) => order[a.level] - order[b.level] || a.file.localeCompare(b.file) || a.line - b.line);
   if (args.includes("--json")) {
@@ -264,7 +303,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       seen.add(x.id);
     }
     const counts = ["error", "warn", "info"].map((k) => [k, all.filter((x) => x.level === k).length]).filter(([, n]) => n).map(([k, n]) => `${n} ${k}`).join(", ");
-    console.log(`── ${files.length} Dateien · ${all.length ? counts : "keine Treffer"}${all.length > max ? ` · ${all.length - max} weitere (--max)` : ""}`);
+    // Was geprüft wurde, damit "keine Treffer" nachvollziehbar ist
+    const kinds = Object.entries(files.reduce((m, f) => { const e = f.slice(f.lastIndexOf(".")).toLowerCase(); m[e] = (m[e] ?? 0) + 1; return m; }, {})).map(([e, n]) => `${n} ${e}`).join(", ");
+    console.log(`── ${files.length} Dateien geprüft${kinds ? ` (${kinds})` : ""} · ${all.length ? counts : "keine Treffer"}${all.length > max ? ` · ${all.length - max} weitere (--max)` : ""}`);
   }
   process.exit(all.some((x) => x.level === "error") ? 1 : 0);
 }

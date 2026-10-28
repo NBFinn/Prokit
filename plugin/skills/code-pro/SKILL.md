@@ -25,7 +25,7 @@ Jeder Modellaufruf schickt den ganzen bisherigen Kontext erneut. Darum zählen z
 | großen Diff lesen | `diff-outline [--base main]` |
 | Befehle jedes Mal neu suchen | `agents-md --write` einmal pro Repo, danach Befehle aus `AGENTS.md` |
 
-Dazu: `lint-cs [pfade]` (typische C#-Fehler), `secrets` (vor Commits), `savings` (Token-Bilanz), `doctor` (Installation prüfen).
+Dazu: `lint-cs [pfade]` (typische C#-Fehler in .cs, .razor und .cshtml; ohne Pfad das ganze Projekt), `secrets` (vor Commits), `savings` (Token-Bilanz), `doctor` (Installation prüfen).
 
 ## Arbeitsweise
 
